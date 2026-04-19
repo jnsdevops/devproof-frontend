@@ -2,7 +2,7 @@ import { useState, useRef, useCallback } from 'react'
 
 // ── Config ─────────────────────────────────────────────────────────────────
 // Set your Railway backend URL here after deploying
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+const API_URL = '/api'
 
 // ── Arch SVG ───────────────────────────────────────────────────────────────
 function ArchSVG({ arch }) {
