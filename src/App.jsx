@@ -308,26 +308,56 @@ export default function App() {
   async function generate() {
     if (!shots.length) return
     setError(''); setAnnotated({}); setPhase('proc'); setProcStep(0)
-    let animStep = 0
-    const anim = setInterval(() => { if (animStep < 4) setProcStep(++animStep) }, 4000)
     try {
       const fd = new FormData()
       shots.forEach(s => fd.append('files', s.file, s.name))
       fd.append('project_name', projName || 'Technical Project')
       fd.append('project_ctx', projCtx || 'DevOps/Cloud')
       fd.append('language', lang)
+
       const res = await fetch(`${API_URL}/process`, { method: 'POST', body: fd })
-      clearInterval(anim); setProcStep(6)
-      if (!res.ok) { const e = await res.json().catch(() => ({ detail: res.statusText })); throw new Error(e.detail || `HTTP ${res.status}`) }
-      const data = await res.json()
-      const merged = { ...data.analysis, ...data.content }
-      setResults(merged)
-      setAnnotated(data.annotated_images || {})
-      setReadmeMd(merged.readme_md || '')
-      setMediumPost(merged.medium_post || '')
-      setLinkedinPost(merged.linkedin_post || '')
-      setPhase('results'); setActiveTab('steps')
-    } catch (e) { clearInterval(anim); setError(e.message); setPhase('upload'); console.error(e) }
+      if (!res.ok) {
+        const e = await res.json().catch(() => ({ detail: res.statusText }))
+        throw new Error(e.detail || `HTTP ${res.status}`)
+      }
+      const { job_id } = await res.json()
+
+      let attempts = 0
+      const maxAttempts = 60
+
+      while (attempts < maxAttempts) {
+        await new Promise(r => setTimeout(r, 3000))
+        attempts++
+        const statusRes = await fetch(`${API_URL}/status/${job_id}`)
+        if (!statusRes.ok) throw new Error('Failed to check job status')
+        const job = await statusRes.json()
+
+        if (job.progress < 30) setProcStep(1)
+        else if (job.progress < 50) setProcStep(2)
+        else if (job.progress < 70) setProcStep(3)
+        else if (job.progress < 85) setProcStep(4)
+        else if (job.progress < 95) setProcStep(5)
+        else setProcStep(6)
+
+        if (job.status === 'done') {
+          const data = job.result
+          const merged = { ...data.analysis, ...data.content }
+          setResults(merged)
+          setAnnotated(data.annotated_images || {})
+          setReadmeMd(merged.readme_md || '')
+          setMediumPost(merged.medium_post || '')
+          setLinkedinPost(merged.linkedin_post || '')
+          setPhase('results'); setActiveTab('steps')
+          return
+        }
+        if (job.status === 'error') throw new Error(job.error || 'Processing failed')
+      }
+      throw new Error('Processing timed out — please try again')
+    } catch (e) {
+      setError(e.message)
+      setPhase('upload')
+      console.error(e)
+    }
   }
 
   // ── Build README with images ───────────────────────────────────────────
