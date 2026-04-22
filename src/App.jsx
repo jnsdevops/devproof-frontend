@@ -332,12 +332,14 @@ export default function App() {
         if (!statusRes.ok) throw new Error('Failed to check job status')
         const job = await statusRes.json()
 
-        if (job.progress < 30) setProcStep(1)
-        else if (job.progress < 50) setProcStep(2)
-        else if (job.progress < 70) setProcStep(3)
-        else if (job.progress < 85) setProcStep(4)
-        else if (job.progress < 95) setProcStep(5)
-        else setProcStep(6)
+        // Smooth progress animation
+        const p = job.progress || 0
+        const status = job.status || 'queued'
+        if (status === 'analyzing') {
+          setProcStep(p < 25 ? 1 : p < 50 ? 2 : 3)
+        } else if (status === 'generating') {
+          setProcStep(p < 75 ? 4 : p < 90 ? 5 : 6)
+        }
 
         if (job.status === 'done') {
           const data = job.result
