@@ -82,26 +82,140 @@ function Logo({ size = 32 }) {
 }
 
 // ── Grid background ───────────────────────────────────────────────────────────
+const TECH_TERMS = [
+  'kubectl apply', 'terraform init', 'docker build', 'helm upgrade',
+  'git push', 'mvn package', 'trivy scan', 'sonarqube', 'argocd sync',
+  'CI/CD', 'K8s', 'EKS', 'ECR', 'IAM', 'VPC', 'RBAC', 'GitOps',
+  'DevSecOps', 'IaC', 'SRE', 'DORA', 'MTTR', 'canary', 'blue-green',
+  'prometheus', 'grafana', 'datadog', 'vault', 'cert-manager',
+  '200 OK', '{"status":"ok"}', 'pipeline: success', '✓ deployed',
+  'AWS', 'Azure', 'GCP', 'Jenkins', 'GitLab', 'GitHub Actions',
+  'node Ready', 'pod Running', 'ingress created', 'rollout complete',
+]
+
+const NODES = [
+  {x:8,y:15,label:'GitHub',color:'#6e7681'},
+  {x:25,y:35,label:'GitLab CI',color:'#FC6D26'},
+  {x:75,y:20,label:'AWS EKS',color:'#FF9900'},
+  {x:88,y:55,label:'Docker',color:'#2496ED'},
+  {x:15,y:70,label:'Terraform',color:'#7B61FF'},
+  {x:50,y:80,label:'Prometheus',color:'#E6522C'},
+  {x:70,y:65,label:'SonarQube',color:'#4E9BCD'},
+  {x:40,y:25,label:'Jenkins',color:'#D33833'},
+  {x:85,y:85,label:'Kubernetes',color:'#326CE5'},
+  {x:30,y:85,label:'ArgoCD',color:'#EF7B4D'},
+]
+
+const EDGES = [
+  {from:0,to:1},{from:1,to:7},{from:7,to:3},
+  {from:1,to:6},{from:3,to:8},{from:4,to:2},
+  {from:2,to:8},{from:8,to:5},{from:1,to:2},
+]
+
 function GridBg() {
+  const [tick, setTick] = useState(0)
+  useEffect(() => {
+    const id = setInterval(() => setTick(t => t+1), 3000)
+    return () => clearInterval(id)
+  }, [])
+
   return (
-    <div style={{
-      position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', overflow: 'hidden',
-    }}>
+    <div style={{position:'fixed',inset:0,zIndex:0,pointerEvents:'none',overflow:'hidden'}}>
+      {/* Base grid */}
       <div style={{
-        position: 'absolute', inset: 0,
-        backgroundImage: `
-          linear-gradient(rgba(0,200,255,0.025) 1px, transparent 1px),
-          linear-gradient(90deg, rgba(0,200,255,0.025) 1px, transparent 1px)
+        position:'absolute',inset:0,
+        backgroundImage:`
+          linear-gradient(rgba(0,200,255,0.018) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(0,200,255,0.018) 1px, transparent 1px)
         `,
-        backgroundSize: '40px 40px',
+        backgroundSize:'44px 44px',
       }}/>
+
+      {/* Top glow */}
       <div style={{
-        position: 'absolute', inset: 0,
-        background: 'radial-gradient(ellipse 80% 60% at 50% -10%, rgba(0,200,255,0.06) 0%, transparent 70%)',
+        position:'absolute',inset:0,
+        background:'radial-gradient(ellipse 70% 40% at 50% -5%, rgba(0,200,255,0.07) 0%, transparent 70%)',
       }}/>
+
+      {/* Right glow */}
       <div style={{
-        position: 'absolute', bottom: 0, left: 0, right: 0, height: '40%',
-        background: 'linear-gradient(to top, rgba(7,11,18,1) 0%, transparent 100%)',
+        position:'absolute',inset:0,
+        background:'radial-gradient(ellipse 40% 60% at 95% 50%, rgba(123,97,255,0.04) 0%, transparent 70%)',
+      }}/>
+
+      {/* SVG — nodes + edges */}
+      <svg width="100%" height="100%" style={{position:'absolute',inset:0,opacity:.18}}>
+        {EDGES.map((e,i) => {
+          const f = NODES[e.from], t = NODES[e.to]
+          return (
+            <line key={i}
+              x1={`${f.x}%`} y1={`${f.y}%`}
+              x2={`${t.x}%`} y2={`${t.y}%`}
+              stroke="#00C8FF" strokeWidth=".6"
+              strokeDasharray="4 6"
+            />
+          )
+        })}
+        {NODES.map((n,i) => (
+          <g key={i}>
+            <circle cx={`${n.x}%`} cy={`${n.y}%`} r="3" fill={n.color} opacity=".7"/>
+            <circle cx={`${n.x}%`} cy={`${n.y}%`} r="6" fill="none" stroke={n.color} strokeWidth=".5" opacity=".3"/>
+            <text x={`${n.x}%`} y={`${n.y}%`}
+              dy="-10" textAnchor="middle"
+              fontFamily="DM Mono,monospace" fontSize="9" fill={n.color} opacity=".5">
+              {n.label}
+            </text>
+          </g>
+        ))}
+      </svg>
+
+      {/* Floating tech terms */}
+      {TECH_TERMS.map((term, i) => {
+        const x = ((i * 137.5 + tick * 0.5) % 90) + 3
+        const y = ((i * 97.3) % 85) + 5
+        const opacity = 0.04 + (i % 4) * 0.02
+        const size = 9 + (i % 3)
+        return (
+          <div key={term} style={{
+            position:'absolute',
+            left:`${x}%`, top:`${y}%`,
+            fontFamily:'DM Mono,monospace',
+            fontSize:size,
+            color: i % 5 === 0 ? '#00C8FF' : i % 5 === 1 ? '#FF9500' : i % 5 === 2 ? '#00D68F' : i % 5 === 3 ? '#7B61FF' : '#8DA4BE',
+            opacity,
+            whiteSpace:'nowrap',
+            transition:'all 3s ease',
+            userSelect:'none',
+          }}>{term}</div>
+        )
+      })}
+
+      {/* Animated pulse rings at node positions */}
+      <svg width="100%" height="100%" style={{position:'absolute',inset:0,opacity:.06}}>
+        {NODES.slice(0,4).map((n,i) => (
+          <circle key={i}
+            cx={`${n.x}%`} cy={`${n.y}%`}
+            r={20 + (tick % 3) * 8}
+            fill="none" stroke={n.color} strokeWidth=".5"
+            style={{transition:'r 3s ease'}}
+          />
+        ))}
+      </svg>
+
+      {/* Bottom fade */}
+      <div style={{
+        position:'absolute',bottom:0,left:0,right:0,height:'35%',
+        background:'linear-gradient(to top, rgba(7,11,18,1) 0%, transparent 100%)',
+      }}/>
+      {/* Left fade */}
+      <div style={{
+        position:'absolute',top:0,left:0,bottom:0,width:'6%',
+        background:'linear-gradient(to right, rgba(7,11,18,.8) 0%, transparent 100%)',
+      }}/>
+      {/* Right fade */}
+      <div style={{
+        position:'absolute',top:0,right:0,bottom:0,width:'6%',
+        background:'linear-gradient(to left, rgba(7,11,18,.8) 0%, transparent 100%)',
       }}/>
     </div>
   )
