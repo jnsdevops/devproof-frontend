@@ -116,39 +116,23 @@ button:hover { transition: var(--transition); }
 
 // ── Nubian Sun Logo ────────────────────────────────────────────────────────────
 // Inspired by Meroitic art: sun disk + Ankh cross + pyramid geometry
-function NubianLogo({ size = 32, primary = '#1F75CB' }) {
+function DevProofIcon({ size = 32, color = '#1F75CB' }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-      {/* Outer sun ring with rays — Meroe sun disk */}
-      <circle cx="20" cy="20" r="18" stroke={primary} strokeWidth="1.5" fill="none" opacity=".25"/>
-      <circle cx="20" cy="20" r="14" stroke={primary} strokeWidth="1" fill="none" opacity=".15"/>
-
-      {/* Sun rays — 8 rays like Meroitic sun */}
-      {[0,45,90,135,180,225,270,315].map((angle, i) => {
-        const rad = (angle * Math.PI) / 180
-        const x1 = 20 + 14.5 * Math.cos(rad)
-        const y1 = 20 + 14.5 * Math.sin(rad)
-        const x2 = 20 + 18 * Math.cos(rad)
-        const y2 = 20 + 18 * Math.sin(rad)
-        return <line key={i} x1={x1.toFixed(2)} y1={y1.toFixed(2)} x2={x2.toFixed(2)} y2={y2.toFixed(2)} stroke={primary} strokeWidth="1.5" strokeLinecap="round" opacity=".6"/>
-      })}
-
-      {/* Pyramid / Triangle — Nubian pyramid form */}
-      <path d="M20 8 L28 26 L12 26 Z" fill={primary} opacity=".15" stroke={primary} strokeWidth="1.2" strokeLinejoin="round"/>
-
-      {/* Ankh cross — inside pyramid */}
-      {/* Vertical line */}
-      <line x1="20" y1="17" x2="20" y2="25" stroke={primary} strokeWidth="1.8" strokeLinecap="round"/>
-      {/* Horizontal bar */}
-      <line x1="16.5" y1="21" x2="23.5" y2="21" stroke={primary} strokeWidth="1.8" strokeLinecap="round"/>
-      {/* Oval top of Ankh */}
-      <ellipse cx="20" cy="15.5" rx="2.8" ry="2" stroke={primary} strokeWidth="1.5" fill="none"/>
-
-      {/* Center dot — the eye / awareness */}
-      <circle cx="20" cy="20" r="1.5" fill={primary} opacity=".8"/>
+    <svg width={size} height={size} viewBox="0 0 32 32" fill="none">
+      <rect width="32" height="32" rx="8" fill={color} fillOpacity=".12"/>
+      <rect x="1" y="1" width="30" height="30" rx="7" stroke={color} strokeWidth=".8" strokeOpacity=".3"/>
+      {/* Terminal prompt */}
+      <path d="M7 11 L11 15 L7 19" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+      {/* Cursor line */}
+      <line x1="13" y1="19" x2="20" y2="19" stroke={color} strokeWidth="2" strokeLinecap="round"/>
+      {/* Deploy arrow - right side */}
+      <path d="M22 10 L26 15 L22 20" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" strokeOpacity=".6"/>
+      {/* Check mark */}
+      <path d="M13 13 L15.5 15.5 L20 11" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
     </svg>
   )
 }
+
 
 // ── Architecture SVG ───────────────────────────────────────────────────────────
 function ArchSVG({ arch }) {
@@ -647,7 +631,7 @@ export default function App() {
         setProcStep(step)
         if (job.status==='done') {
           const d = job.result
-          const merged = {...d.analysis,...d.content}
+          const merged = {...d.analysis,...d.content, duplicate_alert: d.duplicate_alert}
           setResults(merged); setAnnotated(d.annotated_images||{})
           setReadmeMd(d.content?.readme_md||'')
           setMediumPost(d.content?.medium_post||'')
@@ -820,7 +804,7 @@ export default function App() {
       }}>
         {/* Logo + Name */}
         <div style={{display:'flex',alignItems:'center',gap:10}}>
-          <NubianLogo size={32} primary={primaryColor}/>
+          <DevProofIcon size={32} color={primaryColor}/>
           <div>
             <span style={{fontFamily:'var(--font)',fontSize:15,fontWeight:800,color:'var(--text)',letterSpacing:'-.2px'}}>
               DevProof
@@ -978,41 +962,91 @@ export default function App() {
           </div>
         )}
 
-        {/* ── PROCESSING ── */}
+        {/* ── PROCESSING — Futuristic Terminal ── */}
         {phase==='proc'&&(
-          <div style={{...card,display:'flex',flexDirection:'column',alignItems:'center',gap:24,padding:'52px 24px'}} className="fade-up">
-            <div style={{position:'relative',width:52,height:52}}>
-              <div style={{position:'absolute',inset:0,borderRadius:'50%',border:'3px solid var(--border)',borderTopColor:'var(--primary)',animation:'spin .8s linear infinite'}}/>
-              <div style={{position:'absolute',inset:6,display:'flex',alignItems:'center',justifyContent:'center'}}>
-                <NubianLogo size={28} primary={primaryColor}/>
+          <div style={{...card,padding:0,overflow:'hidden',background:'#0D1117',border:'1px solid #30363D'}} className="fade-up">
+            {/* Terminal header */}
+            <div style={{display:'flex',alignItems:'center',gap:8,padding:'10px 16px',background:'#161B22',borderBottom:'1px solid #30363D'}}>
+              <div style={{width:12,height:12,borderRadius:'50%',background:'#FF5F57'}}/>
+              <div style={{width:12,height:12,borderRadius:'50%',background:'#FFBD2E'}}/>
+              <div style={{width:12,height:12,borderRadius:'50%',background:'#28CA41'}}/>
+              <span style={{marginLeft:8,fontSize:11,color:'#8B949E',fontFamily:'var(--mono)'}}>
+                devproof — pipeline running
+              </span>
+              <div style={{marginLeft:'auto',display:'flex',alignItems:'center',gap:6}}>
+                <div style={{width:8,height:8,borderRadius:'50%',background:'#28CA41',boxShadow:'0 0 6px #28CA41',animation:'pulse 1.5s infinite'}}/>
+                <span style={{fontSize:10,color:'#28CA41',fontFamily:'var(--mono)'}}>LIVE</span>
               </div>
             </div>
-            <div style={{textAlign:'center'}}>
-              <p style={{fontSize:16,fontWeight:700,color:'var(--text)',marginBottom:4}}>
-                Processing your project
-              </p>
-              <p style={{fontSize:13,color:'var(--text3)'}}>
-                This may take 30-60 seconds
-              </p>
-            </div>
-            <div style={{display:'flex',flexDirection:'column',gap:5,width:'100%',maxWidth:420}}>
-              {STEPS.map((s,i)=>{
-                const done=i<procStep,active=i===procStep
-                return (
-                  <div key={i} style={{
-                    display:'flex',alignItems:'center',gap:10,padding:'9px 14px',
-                    borderRadius:'var(--r)',fontSize:13,fontWeight:500,
-                    background:done?'var(--success-bg)':active?'var(--primary-bg)':'var(--bg2)',
-                    color:done?'var(--success)':active?'var(--primary)':'var(--text3)',
-                    border:`1px solid ${done?'#B8E8C8':active?'#BEDAF7':'var(--border)'}`,
-                    transition:'var(--transition)',
-                  }}>
-                    <span style={{fontSize:14,minWidth:20}}>{done?'✓':active?'⟳':'○'}</span>
-                    {s}
-                    {active&&<div style={{marginLeft:'auto',width:14,height:14,borderRadius:'50%',border:'2px solid var(--primary)',borderTopColor:'transparent',animation:'spin .6s linear infinite'}}/>}
+            
+            {/* Terminal body */}
+            <div style={{padding:'20px 24px',minHeight:320}}>
+              {/* Spinner row */}
+              <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:24}}>
+                <div style={{position:'relative',width:40,height:40,flexShrink:0}}>
+                  <div style={{position:'absolute',inset:0,borderRadius:'50%',border:'2px solid #30363D',borderTopColor:'#58A6FF',animation:'spin .7s linear infinite'}}/>
+                  <div style={{position:'absolute',inset:5,borderRadius:'50%',border:'1.5px solid #30363D',borderBottomColor:'#3FB950',animation:'spin 1.1s linear infinite reverse'}}/>
+                </div>
+                <div>
+                  <div style={{fontSize:14,fontWeight:700,color:'#E6EDF3',fontFamily:'var(--mono)'}}>
+                    $ devproof run --project "{projName||'project'}"
                   </div>
-                )
-              })}
+                  <div style={{fontSize:11,color:'#8B949E',fontFamily:'var(--mono)',marginTop:2}}>
+                    Processing {shots.length} screenshot{shots.length!==1?'s':''}...
+                  </div>
+                </div>
+              </div>
+
+              {/* Steps as terminal output */}
+              <div style={{display:'flex',flexDirection:'column',gap:3}}>
+                {STEPS.map((s,i)=>{
+                  const done=i<procStep,active=i===procStep,pending=i>procStep
+                  return (
+                    <div key={i} style={{
+                      display:'flex',alignItems:'center',gap:10,
+                      padding:'6px 0',fontFamily:'var(--mono)',fontSize:12,
+                      opacity:pending?0.35:1,transition:'opacity .4s, color .4s',
+                    }}>
+                      {/* Status indicator */}
+                      {done&&<span style={{color:'#3FB950',minWidth:16}}>✓</span>}
+                      {active&&(
+                        <div style={{width:10,height:10,minWidth:10,borderRadius:'50%',
+                          border:'1.5px solid #58A6FF',borderTopColor:'transparent',
+                          animation:'spin .5s linear infinite'}}/>
+                      )}
+                      {pending&&<span style={{color:'#30363D',minWidth:16}}>·</span>}
+                      
+                      {/* Step text */}
+                      <span style={{color:done?'#3FB950':active?'#58A6FF':'#484F58'}}>
+                        {done&&'[OK] '}
+                        {active&&'[RUN] '}
+                        {pending&&'[---] '}
+                      </span>
+                      <span style={{color:done?'#E6EDF3':active?'#E6EDF3':'#484F58'}}>
+                        {s}
+                      </span>
+                      {active&&(
+                        <span style={{color:'#58A6FF',animation:'pulse 1s infinite'}}>_</span>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+
+              {/* Progress bar */}
+              <div style={{marginTop:24,height:3,background:'#30363D',borderRadius:2,overflow:'hidden'}}>
+                <div style={{
+                  height:'100%',borderRadius:2,
+                  background:'linear-gradient(90deg,#58A6FF,#3FB950)',
+                  width:`${Math.round((procStep/STEPS.length)*100)}%`,
+                  transition:'width .5s ease',
+                  boxShadow:'0 0 8px rgba(88,166,255,0.5)',
+                }}/>
+              </div>
+              <div style={{display:'flex',justifyContent:'space-between',marginTop:6,fontFamily:'var(--mono)',fontSize:10,color:'#484F58'}}>
+                <span>devproof-ai v3.0</span>
+                <span>{Math.round((procStep/STEPS.length)*100)}%</span>
+              </div>
             </div>
           </div>
         )}
@@ -1052,6 +1086,15 @@ export default function App() {
                   </div>
                 </div>
               </div>
+
+              {/* Duplicate alert */}
+              {results.duplicate_alert?.has_duplicates&&(
+                <div style={{padding:'8px 13px',borderRadius:'var(--r)',fontSize:12.5,
+                  marginBottom:10,fontWeight:600,background:'var(--warning-bg)',
+                  color:'var(--warning)',border:'1px solid #EFD080'}}>
+                  {results.duplicate_alert.message}
+                </div>
+              )}
 
               {/* Security */}
               <div style={{
