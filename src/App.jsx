@@ -275,6 +275,219 @@ function Lightbox({ src, onClose }) {
   )
 }
 
+// ── Annotation Editor (Canvas) ───────────────────────────────────────────────
+function AnnotationEditor({ imgSrc, callouts, stepNum, onSave, onClose }) {
+  const canvasRef = useRef()
+  const [boxes, setBoxes] = useState(
+    callouts.map((c, i) => ({
+      id: c.id || i + 1,
+      x0: c.x0_pct || 10, y0: c.y0_pct || 20,
+      x1: c.x1_pct || 45, y1: c.y1_pct || 35,
+      color: c.color || 'cyan',
+      label: c.label || '',
+      explanation: c.explanation || '',
+    }))
+  )
+  const [selected, setSelected] = useState(null)
+  const [drawing, setDrawing] = useState(false)
+  const [dragStart, setDragStart] = useState(null)
+  const [imgLoaded, setImgLoaded] = useState(false)
+  const imgRef = useRef()
+
+  const COLORS = {
+    cyan: '#00C8FF', green: '#00D68F',
+    amber: '#FF9500', red: '#FF4560', pink: '#EC4899'
+  }
+
+  function getRelativePos(e) {
+    const rect = canvasRef.current.getBoundingClientRect()
+    return {
+      x: ((e.clientX - rect.left) / rect.width) * 100,
+      y: ((e.clientY - rect.top) / rect.height) * 100,
+    }
+  }
+
+  function onMouseDown(e) {
+    const pos = getRelativePos(e)
+    // Check if clicking on existing box
+    const hit = boxes.findIndex(b =>
+      pos.x >= b.x0 && pos.x <= b.x1 &&
+      pos.y >= b.y0 && pos.y <= b.y1
+    )
+    if (hit >= 0) { setSelected(hit); return }
+    // Start drawing new box
+    setDrawing(true)
+    setDragStart(pos)
+    setSelected(null)
+  }
+
+  function onMouseMove(e) {
+    if (!drawing || !dragStart) return
+    const pos = getRelativePos(e)
+    const newBox = {
+      id: boxes.length + 1,
+      x0: Math.min(dragStart.x, pos.x),
+      y0: Math.min(dragStart.y, pos.y),
+      x1: Math.max(dragStart.x, pos.x),
+      y1: Math.max(dragStart.y, pos.y),
+      color: 'cyan', label: '', explanation: '',
+    }
+    setBoxes(prev => {
+      const updated = [...prev]
+      if (drawing && updated[updated.length - 1]?.drawing) {
+        updated[updated.length - 1] = { ...newBox, drawing: true }
+      } else {
+        updated.push({ ...newBox, drawing: true })
+      }
+      return updated
+    })
+  }
+
+  function onMouseUp(e) {
+    if (!drawing) return
+    setDrawing(false)
+    setDragStart(null)
+    setBoxes(prev => prev.map(b => ({ ...b, drawing: false })))
+    setSelected(boxes.length > 0 ? boxes.length - 1 : null)
+  }
+
+  function deleteBox(idx) {
+    setBoxes(prev => prev.filter((_, i) => i !== idx).map((b, i) => ({ ...b, id: i + 1 })))
+    setSelected(null)
+  }
+
+  function updateBox(idx, field, value) {
+    setBoxes(prev => prev.map((b, i) => i === idx ? { ...b, [field]: value } : b))
+  }
+
+  function handleSave() {
+    const saved = boxes.filter(b => !b.drawing).map(b => ({
+      id: b.id,
+      x0_pct: Math.round(b.x0 * 10) / 10,
+      y0_pct: Math.round(b.y0 * 10) / 10,
+      x1_pct: Math.round(b.x1 * 10) / 10,
+      y1_pct: Math.round(b.y1 * 10) / 10,
+      color: b.color,
+      label: b.label,
+      explanation: b.explanation,
+    }))
+    onSave(saved)
+  }
+
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, background: 'rgba(0,0,0,.92)',
+      zIndex: 1000, display: 'flex', flexDirection: 'column',
+      alignItems: 'center', justifyContent: 'center', gap: 12, padding: 16,
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', maxWidth: 900 }}>
+        <div style={{ color: '#fff', fontSize: 14, fontWeight: 700 }}>
+          ✏️ Edit Annotations — Step {stepNum}
+        </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button onClick={handleSave} style={{
+            padding: '7px 16px', background: '#00C8FF', color: '#070B12',
+            border: 'none', borderRadius: 6, fontSize: 13, fontWeight: 700, cursor: 'pointer'
+          }}>✓ Save</button>
+          <button onClick={onClose} style={{
+            padding: '7px 16px', background: 'rgba(255,255,255,.15)',
+            color: '#fff', border: 'none', borderRadius: 6, fontSize: 13, cursor: 'pointer'
+          }}>Cancel</button>
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', gap: 12, width: '100%', maxWidth: 900 }}>
+        {/* Canvas */}
+        <div style={{ flex: 1, position: 'relative', cursor: drawing ? 'crosshair' : 'default' }}>
+          <img ref={imgRef} src={imgSrc} onLoad={() => setImgLoaded(true)}
+            style={{ width: '100%', display: 'block', borderRadius: 8, userSelect: 'none' }}/>
+          {imgLoaded && (
+            <div ref={canvasRef}
+              onMouseDown={onMouseDown} onMouseMove={onMouseMove} onMouseUp={onMouseUp}
+              style={{ position: 'absolute', inset: 0, cursor: drawing ? 'crosshair' : 'default' }}>
+              {boxes.map((b, idx) => (
+                <div key={idx} onClick={() => setSelected(idx)} style={{
+                  position: 'absolute',
+                  left: `${b.x0}%`, top: `${b.y0}%`,
+                  width: `${b.x1 - b.x0}%`, height: `${b.y1 - b.y0}%`,
+                  border: `2px solid ${COLORS[b.color] || '#00C8FF'}`,
+                  background: `${COLORS[b.color] || '#00C8FF'}22`,
+                  boxShadow: selected === idx ? `0 0 0 2px white` : 'none',
+                  cursor: 'pointer', borderRadius: 3,
+                }}>
+                  <div style={{
+                    position: 'absolute', top: -22, left: 0,
+                    background: COLORS[b.color] || '#00C8FF',
+                    color: '#000', fontSize: 10, fontWeight: 800,
+                    padding: '2px 6px', borderRadius: 3, whiteSpace: 'nowrap'
+                  }}>{b.id} {b.label}</div>
+                </div>
+              ))}
+            </div>
+          )}
+          <div style={{ marginTop: 8, fontSize: 11, color: 'rgba(255,255,255,.5)', textAlign: 'center' }}>
+            Click and drag to draw a new annotation box • Click a box to select and edit it
+          </div>
+        </div>
+
+        {/* Controls panel */}
+        <div style={{ width: 220, display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,.7)' }}>
+            ANNOTATIONS ({boxes.filter(b=>!b.drawing).length})
+          </div>
+
+          {boxes.filter(b => !b.drawing).map((b, idx) => (
+            <div key={idx} onClick={() => setSelected(idx)} style={{
+              padding: 10, borderRadius: 8, cursor: 'pointer',
+              border: `1px solid ${selected === idx ? COLORS[b.color] : 'rgba(255,255,255,.1)'}`,
+              background: selected === idx ? 'rgba(255,255,255,.08)' : 'rgba(255,255,255,.04)',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: COLORS[b.color] }}>#{b.id}</span>
+                <button onClick={e => { e.stopPropagation(); deleteBox(idx) }} style={{
+                  background: 'rgba(255,69,96,.3)', border: 'none', color: '#FF4560',
+                  width: 18, height: 18, borderRadius: '50%', fontSize: 10, cursor: 'pointer'
+                }}>✕</button>
+              </div>
+              {selected === idx && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                  <input value={b.label} onChange={e => updateBox(idx, 'label', e.target.value)}
+                    placeholder="Label (2-3 words)" style={{
+                      padding: '4px 8px', fontSize: 11, borderRadius: 4,
+                      border: '1px solid rgba(255,255,255,.2)', background: 'rgba(255,255,255,.05)',
+                      color: '#fff', outline: 'none'
+                    }}/>
+                  <input value={b.explanation} onChange={e => updateBox(idx, 'explanation', e.target.value)}
+                    placeholder="Why this matters" style={{
+                      padding: '4px 8px', fontSize: 11, borderRadius: 4,
+                      border: '1px solid rgba(255,255,255,.2)', background: 'rgba(255,255,255,.05)',
+                      color: '#fff', outline: 'none'
+                    }}/>
+                  <select value={b.color} onChange={e => updateBox(idx, 'color', e.target.value)} style={{
+                    padding: '4px 8px', fontSize: 11, borderRadius: 4,
+                    border: '1px solid rgba(255,255,255,.2)', background: '#1a1a2e',
+                    color: '#fff', outline: 'none', cursor: 'pointer'
+                  }}>
+                    <option value="cyan">Cyan — commands</option>
+                    <option value="green">Green — success</option>
+                    <option value="amber">Amber — config</option>
+                    <option value="red">Red — errors</option>
+                    <option value="pink">Pink — buttons</option>
+                  </select>
+                </div>
+              )}
+            </div>
+          ))}
+
+          <div style={{ fontSize: 10, color: 'rgba(255,255,255,.35)', marginTop: 8 }}>
+            Max 2 annotations per image recommended
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── Markdown Editor ────────────────────────────────────────────────────────────
 function MarkdownEditor({ value, onChange, label, icon }) {
   const [tab, setTab] = useState('edit')
@@ -353,6 +566,7 @@ export default function App() {
   const [error, setError] = useState('')
   const [drag, setDrag] = useState(false)
   const [lightboxSrc, setLightboxSrc] = useState(null)
+  const [annotEditor, setAnnotEditor] = useState(null) // {stepNum, imgSrc, callouts}
   const fileRef = useRef()
 
   const [readmeMd, setReadmeMd] = useState('')
@@ -579,6 +793,23 @@ export default function App() {
     <div style={{minHeight:'100vh',background:'var(--bg1)'}}>
 
       {lightboxSrc&&<Lightbox src={lightboxSrc} onClose={()=>setLightboxSrc(null)}/>}
+      {annotEditor&&(
+        <AnnotationEditor
+          imgSrc={annotEditor.imgSrc}
+          callouts={annotEditor.callouts}
+          stepNum={annotEditor.stepNum}
+          onSave={(newCallouts) => {
+            setResults(prev => ({
+              ...prev,
+              ordered_steps: prev.ordered_steps.map(s =>
+                s.number === annotEditor.stepNum ? {...s, callouts: newCallouts} : s
+              )
+            }))
+            setAnnotEditor(null)
+          }}
+          onClose={() => setAnnotEditor(null)}
+        />
+      )}}
 
       {/* ── Top Navigation Bar (GitLab style) ── */}
       <nav style={{
